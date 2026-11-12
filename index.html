@@ -41,8 +41,13 @@ async function syncRemote(){
     remoteInfo={syncedAt:data.syncedAt,count:data.cats.length,localEdits:localEdits.length};
     save();render();
   }catch(err){
-    remoteInfo={syncedAt:EMBEDDED_REGISTRY.syncedAt,count:EMBEDDED_REGISTRY.count,localEdits:0};
-    render();
+    const localEdits=cats.filter(c=>c.source==='Brauseris muudetud'||c.source==='Brauseris lisatud');
+    const overrides=new Map(localEdits.map(c=>[catKey(c),c]));
+    const keys=new Set();
+    cats=EMBEDDED_REGISTRY.cats.map(c=>{const k=catKey(c);keys.add(k);return overrides.get(k)||c});
+    for(const c of localEdits){if(!keys.has(catKey(c)))cats.push(c)}
+    remoteInfo={syncedAt:EMBEDDED_REGISTRY.syncedAt,count:EMBEDDED_REGISTRY.count,localEdits:localEdits.length};
+    save();render();
     $('notice').innerHTML+='<div class="warn">Värske andmefaili laadimine ei õnnestunud ('+esc(err.message)+'). Kasutatakse HTML-is olevat koondregistri koopiat; hilisemad muudatused võivad puududa.</div>';
   }
 }
