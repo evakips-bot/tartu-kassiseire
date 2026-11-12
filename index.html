@@ -77,10 +77,20 @@ async function saveForm(ev){
    const slug=url=>{try{return new URL(url).pathname.split('/').filter(Boolean).pop()?.toLowerCase()||''}catch{return ''}};
    if(!slug(f.profile)||slug(f.profile)!==slug(f.evidence)){alert('Kojumineku tõend peab viitama sama kassi profiilile.');return}
  }
- const desired={1:f.name,2:f.profile||'',3:f.place||'',4:f.arrived||'',5:deadline(f.arrived),10:smap[f.status],14:f.checked||'',15:f.homedate||'',16:f.evidence||''};
- if(f.notes!==(c.notes||''))desired[9]=f.notes||'';
- if(f.status==='unclear'&&!c.sheetValues[11])desired[11]=new Date().toLocaleDateString('et-EE');
- if(f.status==='home'||f.status==='return')desired[13]='Ei';
+ const desired={};
+ // Saada ainult need lahtrid, mida omanik tegelikult muutis.
+ // Ära kirjuta iga salvestamisega üle saabumise kuupäeva, 14 päeva tähtaega ega ajaloolist staatust.
+ const fieldMap={name:1,profile:2,place:3,arrived:4,checked:14,homedate:15,evidence:16,notes:9};
+ for(const [field,index] of Object.entries(fieldMap)){
+   if(String(f[field]??'')!==String(c[field]??''))desired[index]=String(f[field]??'');
+ }
+ const statusChanged=f.status!==status(c);
+ if(statusChanged){
+   desired[10]=smap[f.status];
+   if(f.status==='unclear'&&!c.sheetValues[11])desired[11]=new Date().toLocaleDateString('et-EE');
+   if(f.status==='home'||f.status==='return')desired[13]='Ei';
+ }
+ if(Object.prototype.hasOwnProperty.call(desired,4))desired[5]=deadline(f.arrived);
  const button=$('submitCat');button.disabled=true;button.textContent='Salvestan...';
  try{
  const spreadsheet='1MT5X15N10d-9FEpeU471M6Jkhz5KN2i31bQQvRgNk0A',sheet="'Koondregister – kõik kassid'",base='https://sheets.googleapis.com/v4/spreadsheets/'+spreadsheet;
@@ -94,7 +104,7 @@ async function saveForm(ev){
  await sheetsCall('POST',base+'/values:batchUpdate',payload);
  const verify=await sheetsCall('GET',base+'/values/'+encodeURIComponent(rowRange)+'?valueRenderOption=FORMATTED_VALUE');
  const saved=Array.from({length:17},(_,i)=>String(verify.values?.[0]?.[i]??''));
- if(changed.some(([i,v])=>saved[+i]!==String(v))){alert('Salvestamine toimus, kuid tagasilugemine erines. Kontrolli enne jätkamist Google Sheetsi kirjet.');return}
+ if(changed.some(([i,v])=>saved[+i].trim()!==String(v).trim())){alert('Salvestamine toimus, kuid tagasilugemine erines. Kontrolli enne jätkamist Google Sheetsi kirjet.');return}
  cats=cats.map(x=>x.id===c.id?{...c,name:f.name,profile:f.profile,place:f.place,arrived:f.arrived,deadline:deadline(f.arrived),status:f.status,checked:f.checked,homedate:f.homedate,evidence:f.evidence,notes:f.notes,sheetValues:saved,source:'Brauseris muudetud'}:x);
  log('Google Sheets: salvestatud '+f.name);
  close();render();alert('Kirje salvestati ja kontrolliti Google Sheetsist tagasi. Avalik veebivaade uueneb pärast andmete järgmist eksporti.');
