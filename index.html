@@ -46,4 +46,4 @@ async function syncRemote(){
     $('notice').innerHTML+='<div class="warn">Automaatne andmete laadimine ei õnnestunud: '+esc(err.message)+'. Näidatud on seni brauseris salvestatud andmed.</div>';
   }
 }
-load();render();syncRemote();})();</script></body></html>
+load();render();syncRemote();setInterval(syncRemote,5*60*1000);})();</script></body></html>
