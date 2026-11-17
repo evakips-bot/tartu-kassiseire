@@ -129,13 +129,18 @@ function sheetStatus(row){
 function profileCheckState(c){
  const row=c.sheetValues;
  const st=String(row?.[10]??c.status??'').trim().toLowerCase();
- const s=status(c);
- if(['home','return'].includes(s))return 'completed';
+ const current=status(c);
+ const checked=String(c.checked??row?.[14]??'').trim();
  const proof=String(row?.[12]??c.proofNote??'').toLowerCase();
+ // Määramata, ebaselge või kontrolli vajav staatus jääb punaseks,
+ // isegi kui eelnev kontrollikuupäev on tabelis olemas.
+ if(current==='unknown'||current==='unclear'||!st||/määramata|ebaselge|vajab.*kontroll|kontrollimata|teadmata|haiht/.test(st))return 'unchecked';
+ if(current==='home'||current==='return')return 'completed';
+ // Määratud staatus koos käsitsi kontrolli kuupäevaga eemaldab punase tausta.
+ if(checked&&(current==='waiting'||current==='arrived'))return 'checked';
+ // Kontrollimata kirjed ja lahendamata 404 jäävad punaseks.
  if(/\b404\b/.test(st+' '+proof))return '404';
- if(/kontrollimata/.test(st))return 'unchecked';
- if(!String(c.checked??row?.[14]??'').trim())return 'unchecked';
- return 'checked';
+ return 'unchecked';
 }
 function isRed(c){return ['404','unchecked'].includes(profileCheckState(c))}
 function normalizeCat(c){
